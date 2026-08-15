@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Runtime data (contains sensitive cookies)
+config.json
+downloaded.json
+history.json
+processes.json
+
+# Caches
+cache/
+Logs/
+
+# Temporary download files
+*.mpd
+*.m3u8
+
+# External binaries (users install their own)
+N_m3u8DL-RE.exe
+aria2c.exe
+ffmpeg.exe
+yt-dlp.exe
+
+# OS files
+.DS_Store
+Thumbs.db

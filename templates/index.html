@@ -1,0 +1,2604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOOP / CHZZK 录像下载器</title>
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --panel: #16162a;
+            --panel-2: #2d2d44;
+            --panel-3: #111827;
+            --border: #333;
+            --text: #eee;
+            --muted: #888;
+            --primary: #4a69bd;
+            --primary-strong: #5a7bd8;
+            --hover: #2d2d44;
+            --active: #4a69bd;
+            --input-bg: #1a1a2e;
+            --logo-bg: #ffffff;
+            --accent-soft: rgba(74, 105, 189, 0.18);
+        }
+
+        body.platform-chzzk {
+            --bg: #0d1511;
+            --panel: #101b16;
+            --panel-2: #18251f;
+            --panel-3: #050806;
+            --border: #294336;
+            --text: #eef6f0;
+            --muted: #8da196;
+            --primary: #2f9e64;
+            --primary-strong: #39b171;
+            --hover: #203229;
+            --active: #2f9e64;
+            --input-bg: #111b16;
+            --logo-bg: #050806;
+            --accent-soft: rgba(47, 158, 100, 0.18);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: radial-gradient(circle at top left, var(--accent-soft), transparent 34%), var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        /* 主布局 - 三栏 */
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, var(--panel), var(--bg));
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 0;
+        }
+
+        .log-panel {
+            width: 280px;
+            min-width: 280px;
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, var(--panel), var(--bg));
+        }
+
+        /* 侧边栏 */
+        .sidebar-header {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-header button {
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        .brand-card {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 88%, transparent), transparent);
+        }
+
+        .platform-switch {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .platform-switch button {
+            margin-bottom: 0;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .platform-switch button.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .brand-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: var(--panel-3);
+        }
+
+        .brand-logo-wrap {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: var(--logo-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .brand-logo-wrap img {
+            max-width: 76%;
+            max-height: 76%;
+            object-fit: contain;
+        }
+
+        .brand-text {
+            min-width: 0;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .brand-subtitle {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .streamer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .streamer-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .streamer-item:hover {
+            background: var(--hover);
+        }
+
+        .streamer-item.active {
+            background: var(--active);
+        }
+
+        .streamer-item .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--panel-2);
+            flex-shrink: 0;
+        }
+
+        .streamer-item .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .streamer-item .name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .streamer-item .id {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .streamer-item.live .avatar {
+            box-shadow: 0 0 6px 2px var(--primary), 0 0 14px 4px var(--primary);
+            animation: livePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes livePulse {
+            0%, 100% { box-shadow: 0 0 4px 1px var(--primary), 0 0 10px 3px var(--primary); }
+            50% { box-shadow: 0 0 10px 3px var(--primary), 0 0 22px 7px var(--primary); }
+        }
+
+        /* 日志面板 */
+        .log-panel h3 {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        .log-content .time {
+            color: #666;
+        }
+
+        .log-content .info {
+            color: var(--muted);
+        }
+
+        .log-content .success {
+            color: #27ae60;
+        }
+
+        .log-content .error {
+            color: #e74c3c;
+        }
+
+        .log-content .download {
+            color: #f39c12;
+        }
+
+        /* 顶部工具栏 */
+        .toolbar {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--panel);
+        }
+
+        .toolbar h2 {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .toolbar .spacer {
+            flex: 1;
+        }
+
+        /* 录像网格 */
+        .vod-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .vod-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+        }
+
+        .vod-card {
+            background: var(--panel-2);
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.15s;
+            border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+        }
+
+        .vod-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .vod-thumb-wrap {
+            position: relative;
+            background: var(--bg);
+        }
+
+        .vod-thumb {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .vod-thumb.loaded {
+            opacity: 1;
+        }
+
+        .vod-duration {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        .vod-info {
+            padding: 6px 8px;
+        }
+
+        .vod-title {
+            font-size: 11px;
+            line-height: 1.3;
+            height: 28px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .vod-meta {
+            font-size: 10px;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+        }
+
+        /* 按钮样式 */
+        button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--primary-strong);
+        }
+
+        button:disabled {
+            background: var(--panel-2);
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: color-mix(in srgb, var(--panel-2) 88%, transparent);
+            border: 1px solid var(--border);
+        }
+
+        button.secondary:hover:not(:disabled) {
+            background: var(--hover);
+        }
+
+        /* 下载页面 - 重新设计 */
+        .download-page {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .download-page.show {
+            display: flex;
+        }
+
+        .download-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-header .back {
+            background: none;
+            padding: 4px 8px;
+        }
+
+        .download-header h2 {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        /* 视频信息 - 横向布局在顶部 */
+        .vod-summary {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            background: color-mix(in srgb, var(--panel-2) 80%, transparent);
+        }
+
+        .vod-summary img {
+            width: 200px;
+            height: 112px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .vod-summary .info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .vod-summary h3 {
+            font-size: 15px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .vod-summary .meta {
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .vod-summary .meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 章节区域 - 占满剩余空间 */
+        .chapter-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chapter-toolbar {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: var(--panel);
+        }
+
+        .chapter-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .chapter-item {
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            background: var(--panel-2);
+            border-radius: 6px;
+            font-size: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chapter-item-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chapter-item input {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .chapter-item .ch-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chapter-item .ch-title {
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .chapter-item .ch-meta {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .chapter-item .ch-progress {
+            font-size: 11px;
+            color: #f39c12;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .chapter-item.downloading {
+            background: #3d3d54;
+            border: 1px solid #4a69bd;
+        }
+
+        .chapter-item.downloading .ch-progress {
+            display: block;
+        }
+
+        .chapter-item .status {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 3px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .status.pending {
+            background: #444;
+        }
+
+        .status.downloading {
+            background: #f39c12;
+            color: #000;
+        }
+
+        .status.converting {
+            background: #9b59b6;
+        }
+
+        .status.completed {
+            background: #27ae60;
+        }
+
+        .status.failed {
+            background: #c0392b;
+        }
+
+        .status.retrying {
+            background: #e67e22;
+        }
+
+        /* 进度条 - 颜色填充 */
+        .chapter-item .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .chapter-item .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a69bd, #5a7bd8);
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .chapter-item.downloading .progress-bar .fill {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .chapter-item .progress-bar.completed .fill {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+
+        .chapter-item .progress-bar.failed .fill {
+            background: linear-gradient(90deg, #c0392b, #e74c3c);
+        }
+
+        /* 底部进度栏 */
+        .progress-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #333;
+            background: #16162a;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #1a1a2e;
+            border-radius: 3px;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4a69bd, #5a7bd8);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* 进程管理页面 */
+        .process-page {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .process-page.show {
+            display: flex;
+        }
+
+        .process-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .process-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 16px;
+        }
+
+        .process-item {
+            background: #2d2d44;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .process-item-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+        }
+
+        .process-item-header:hover {
+            background: #3d3d54;
+        }
+
+        .process-item .pid {
+            font-family: monospace;
+            color: #4a69bd;
+            min-width: 60px;
+            font-size: 12px;
+        }
+
+        .process-item .cmd {
+            flex: 1;
+            font-size: 11px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .process-item .proc-status {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .proc-status.running {
+            background: #27ae60;
+        }
+
+        .proc-status.zombie {
+            background: #e74c3c;
+        }
+
+        .proc-status.orphan {
+            background: #e67e22;
+        }
+
+        .proc-status.external {
+            background: #9b59b6;
+        }
+
+        .proc-status.dead {
+            background: #7f8c8d;
+        }
+
+        .proc-status.completed {
+            background: #444;
+        }
+
+        .proc-status.killed {
+            background: #c0392b;
+        }
+
+        .proc-status.cancelled {
+            background: #f39c12;
+            color: #000;
+        }
+
+        .process-item .duration {
+            font-size: 11px;
+            color: #666;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .process-logs {
+            display: none;
+            background: #1a1a2e;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.6;
+            color: #aaa;
+        }
+
+        .process-item.expanded .process-logs {
+            display: block;
+        }
+
+        .process-actions {
+            padding: 8px 12px;
+            border-top: 1px solid #333;
+            display: none;
+            gap: 8px;
+        }
+
+        .process-item.expanded .process-actions {
+            display: flex;
+        }
+
+        /* 弹窗 */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d2d44;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal h3 {
+            margin-bottom: 16px;
+            font-size: 15px;
+        }
+
+        .modal .group {
+            margin-bottom: 12px;
+        }
+
+        .modal label {
+            display: block;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .modal input,
+        .modal textarea {
+            width: 100%;
+            background: #1a1a2e;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .modal textarea {
+            min-height: 70px;
+            resize: vertical;
+        }
+
+        .modal .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .empty {
+            text-align: center;
+            color: #555;
+            padding: 30px;
+            font-size: 12px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body class="platform-soop">
+    <div class="app">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-card">
+                    <div class="platform-switch">
+                        <button id="switchSoopBtn" class="active" onclick="switchPlatform('soop')">SOOP</button>
+                        <button id="switchChzzkBtn" onclick="switchPlatform('chzzk')">CHZZK</button>
+                    </div>
+                    <div class="brand-preview">
+                        <div class="brand-logo-wrap">
+                            <img id="platformLogo" src="https://res.sooplive.com/images/svg/soop_logo.svg" alt="platform logo">
+                        </div>
+                        <div class="brand-text">
+                            <div class="brand-title" id="platformTitle">SOOP</div>
+                            <div class="brand-subtitle" id="platformSubtitle">SOOP 原AfreecaTV</div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="showSettings()">设置</button>
+                <button onclick="showAutoDownload()" class="secondary">自动下载</button>
+                <button onclick="loadFavorites()" class="secondary">刷新列表</button>
+                <button onclick="showProcessPage()" class="secondary" style="margin-top:4px;">进程管理</button>
+                <button onclick="showHistoryPage()" class="secondary">下载历史</button>
+                <div style="margin-top:8px;padding-top:8px;border-top:1px solid #333;">
+                    <div id="parseSectionTitle" style="font-size:11px;color:var(--muted);margin-bottom:4px;">解析链接</div>
+                    <div style="display:flex;gap:4px;">
+                        <input type="text" id="parseUrlInput" placeholder="SOOP/CHZZK/MPD/M3U8 链接" style="flex:1;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:11px;">
+                        <button onclick="parseUrl()" class="secondary" style="padding:6px 10px;">解析</button>
+                    </div>
+                    <div id="manualTitleRow" style="display:none;margin-top:4px;">
+                        <input type="text" id="manualTitleInput" placeholder="可选：手动输入录像标题" style="width:100%;background:var(--input-bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:11px;">
+                    </div>
+                </div>
+            </div>
+            <div class="streamer-list" id="streamerList">
+                <div class="empty">请先设置Cookie</div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main">
+            <div id="listPage">
+                <div class="toolbar">
+                    <h2 id="pageTitle">选择主播查看录像</h2>
+                    <div class="spacer"></div>
+                    <div id="pagination" style="display:none;align-items:center;gap:6px;">
+                        <button onclick="prevPage()" id="prevBtn" class="secondary" disabled>◀</button>
+                        <span id="pageInfo" style="font-size:11px;min-width:50px;text-align:center;">1/1</span>
+                        <button onclick="nextPage()" id="nextBtn" class="secondary">▶</button>
+                    </div>
+                </div>
+                <div class="vod-container">
+                    <div class="vod-grid" id="vodGrid"></div>
+                </div>
+            </div>
+
+            <div class="download-page" id="downloadPage">
+                <div class="download-header">
+                    <button class="back" onclick="showListPage()">← 返回</button>
+                    <h2>下载录像</h2>
+                </div>
+
+                <!-- 视频信息横向展示 -->
+                <div class="vod-summary" id="vodSummary"></div>
+
+                <!-- 章节区域 -->
+                <div class="chapter-section">
+                    <div class="chapter-toolbar">
+                        <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked
+                                style="width:16px;height:16px;"> 全选
+                        </label>
+                        <span id="chapterCount" style="font-size:11px;color:#888;"></span>
+                        <div style="flex:1;"></div>
+                        <button id="downloadBtn" onclick="startDownload()">开始下载</button>
+                        <button id="cancelBtn" onclick="cancelDownload()" style="display:none;background:#c0392b;">停止</button>
+                        <button onclick="openFolder()" class="secondary">打开目录</button>
+                    </div>
+                    <div class="chapter-list" id="chapterList"></div>
+                </div>
+
+                <!-- 底部进度 -->
+                <div class="progress-footer">
+                    <div class="progress-bar">
+                        <div class="fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="statusText">就绪</div>
+                </div>
+            </div>
+
+            <!-- 进程管理页面 -->
+            <div class="process-page" id="processPage">
+                <div class="process-header">
+                    <button class="back" onclick="showListPage()">← 返回</button>
+                    <h2>进程管理</h2>
+                    <div style="flex:1;"></div>
+                    <button onclick="refreshProcesses()" class="secondary">刷新</button>
+                    <button onclick="cleanupProcesses()" class="secondary">清理已完成</button>
+                </div>
+                <div class="process-list" id="processList">
+                    <div class="empty">暂无进程</div>
+                </div>
+            </div>
+
+            <!-- 下载历史页面 -->
+            <div class="process-page" id="historyPage">
+                <div class="process-header">
+                    <button class="back" onclick="showListPage()">← 返回</button>
+                    <h2>下载历史</h2>
+                    <div style="flex:1;"></div>
+                    <button onclick="loadHistory()" class="secondary">刷新</button>
+                    <button onclick="clearHistory()" class="secondary" style="background:#c0392b;">清空</button>
+                </div>
+                <div class="process-list" id="historyList">
+                    <div class="empty">暂无下载记录</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志面板 -->
+        <div class="log-panel">
+            <h3>日志</h3>
+            <div class="log-content" id="logContent"></div>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="max-width:500px;">
+            <h3>设置</h3>
+            <div class="group">
+                <label>Cookie</label>
+                <textarea id="cookieInput" placeholder="从浏览器复制Cookie"></textarea>
+            </div>
+            <div class="group">
+                <label>CHZZK Cookie</label>
+                <textarea id="chzzkCookieInput" placeholder="从 CHZZK 浏览器会话复制完整 Cookie"></textarea>
+            </div>
+            <div class="group">
+                <label>CHZZK Device ID</label>
+                <input type="text" id="chzzkDeviceIdInput" placeholder="例如 338a034b-95cb-4de8-b4c3-56083a6af40d">
+            </div>
+            <div class="group">
+                <label>下载目录</label>
+                <input type="text" id="downloadDir" placeholder="下载保存路径">
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label>外部工具路径</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <button class="secondary" onclick="detectToolPaths()" style="padding:4px 8px;font-size:11px;">自动识别</button>
+                    <span id="toolPathHint" style="font-size:11px;color:#888;">优先读取系统环境变量，可手动覆盖</span>
+                </div>
+            </div>
+            <div class="group">
+                <label>N_m3u8DL-RE 路径</label>
+                <input type="text" id="m3u8dlPathInput" placeholder="例如 D:\\Tool\\N_m3u8DL-RE.exe">
+            </div>
+            <div class="group">
+                <label>aria2c 路径</label>
+                <input type="text" id="aria2cPathInput" placeholder="例如 D:\\Tool\\aria2c.exe">
+            </div>
+            <div class="group">
+                <label>ffmpeg 路径</label>
+                <input type="text" id="ffmpegPathInput" placeholder="例如 C:\\ffmpeg\\bin\\ffmpeg.exe">
+            </div>
+            <div class="group">
+                <label>yt-dlp 路径</label>
+                <input type="text" id="ytDlpPathInput" placeholder="例如 D:\\Tool\\yt-dlp\\yt-dlp.exe">
+            </div>
+            <div class="group">
+                <label>全部应用代理 (可选)</label>
+                <input type="text" id="allProxyInput" placeholder="http://127.0.0.1:7890">
+                <div style="font-size:10px;color:#666;margin-top:4px;">
+                    作为默认代理。下面留空时会自动继承这里的配置。
+                </div>
+            </div>
+            <div class="group">
+                <label>状态查询应用代理</label>
+                <input type="text" id="statusProxyInput" placeholder="留空则继承全部应用代理">
+            </div>
+            <div class="group">
+                <label>视频解析图片加载应用代理</label>
+                <input type="text" id="imageProxyInput" placeholder="留空则继承全部应用代理">
+            </div>
+            <div class="group">
+                <label>视频下载应用代理</label>
+                <input type="text" id="downloadProxyInput" placeholder="留空则继承全部应用代理">
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="splitEnabled" style="width:16px;height:16px;" checked>
+                    启用超长视频自动切分
+                </label>
+                <div style="font-size:10px;color:#666;margin-left:24px;margin-top:2px;">
+                    下载完成后，超过阈值时长的视频会自动切分为多段
+                </div>
+            </div>
+            <div class="group">
+                <label>切分阈值 (小时) — 超过此时长的视频才会切分</label>
+                <input type="number" id="splitThresholdHours" min="1" max="24" step="0.5" style="width:80px;" placeholder="3.5">
+            </div>
+            <div class="group">
+                <label>每段时长 (小时) — 切分后每段的最大时长</label>
+                <input type="number" id="splitSegmentHours" min="0.5" max="24" step="0.5" style="width:80px;" placeholder="2.5">
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label>缓存管理</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <span id="cacheStats" style="font-size:11px;color:#888;">加载中...</span>
+                    <button class="secondary" onclick="showCacheCleanup()"
+                        style="padding:4px 8px;font-size:11px;">清理缓存</button>
+                </div>
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label>磁盘空间</label>
+                <div style="margin-top:6px;">
+                    <div style="background:#1a1a2e;border-radius:4px;height:8px;overflow:hidden;">
+                        <div id="diskSpaceBar" style="height:100%;background:linear-gradient(90deg,#27ae60,#f39c12);width:0%;transition:width 0.3s;"></div>
+                    </div>
+                    <div id="diskSpaceText" style="font-size:11px;color:#888;margin-top:4px;">加载中...</div>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="secondary" onclick="hideSettings()">取消</button>
+                <button onclick="saveSettings()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 缓存清理弹窗 -->
+    <div class="modal" id="cacheCleanupModal">
+        <div class="modal-content" style="max-width:400px;">
+            <h3>清理缓存</h3>
+            <div class="group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="clearImages" style="width:16px;height:16px;" checked>
+                    图片缓存
+                </label>
+                <div style="font-size:10px;color:#666;margin-left:24px;margin-top:2px;">
+                    清理录像封面图片缓存
+                </div>
+            </div>
+            <div class="group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="clearData" style="width:16px;height:16px;" checked>
+                    数据缓存
+                </label>
+                <div style="font-size:10px;color:#666;margin-left:24px;margin-top:2px;">
+                    清理章节信息、录像列表等数据缓存
+                </div>
+            </div>
+            <div class="group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="clearFragments" style="width:16px;height:16px;">
+                    下载片段缓存
+                </label>
+                <div style="font-size:10px;color:#666;margin-left:24px;margin-top:2px;">
+                    清理 N_m3u8DL-RE 的临时文件和 m3u8 分片（不会删除已完成的视频）
+                </div>
+            </div>
+            <div class="actions">
+                <button class="secondary" onclick="hideCacheCleanup()">取消</button>
+                <button onclick="executeCacheCleanup()" style="background:#e74c3c;">清理</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自动下载设置弹窗 -->
+    <div class="modal" id="autoDownloadModal">
+        <div class="modal-content" style="max-width:500px;">
+            <h3>自动下载设置</h3>
+            <div class="group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="autoEnabled" style="width:16px;height:16px;">
+                    启用自动下载
+                </label>
+            </div>
+            <div class="group">
+                <label>检测时间范围</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <input type="number" id="autoStartHour" min="0" max="23" style="width:60px;" placeholder="22"> 点
+                    <span>到</span>
+                    <input type="number" id="autoEndHour" min="0" max="23" style="width:60px;" placeholder="4"> 点
+                </div>
+            </div>
+            <div class="group">
+                <label>检测间隔 (分钟)</label>
+                <input type="number" id="autoInterval" min="5" max="120" style="width:80px;" placeholder="30">
+            </div>
+            <div class="group">
+                <label>最早日期 (早于此日期的录像不自动下载)</label>
+                <input type="date" id="autoEarliestDate">
+            </div>
+            <div class="group">
+                <label>监控的主播 (从关注列表选择)</label>
+                <div id="autoStreamerList" style="max-height:150px;overflow-y:auto;background:#1a1a2e;border-radius:5px;padding:8px;margin-top:6px;">
+                    <div style="color:#666;font-size:11px;">请先加载关注列表</div>
+                </div>
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label>状态</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <span id="autoStatus" style="font-size:11px;color:#888;">未启用</span>
+                    <button class="secondary" onclick="triggerAutoDownload()" style="padding:4px 8px;font-size:11px;">立即检测</button>
+                </div>
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:12px;">
+                <label style="font-weight:600;">CHZZK 自动下载</label>
+            </div>
+            <div class="group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="chzzkAutoEnabled" style="width:16px;height:16px;">
+                    启用 CHZZK 自动下载
+                </label>
+            </div>
+            <div class="group">
+                <label>检测时间范围</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <input type="number" id="chzzkAutoStartHour" min="0" max="23" style="width:60px;" placeholder="22"> 点
+                    <span>到</span>
+                    <input type="number" id="chzzkAutoEndHour" min="0" max="23" style="width:60px;" placeholder="4"> 点
+                </div>
+            </div>
+            <div class="group">
+                <label>检测间隔 (分钟)</label>
+                <input type="number" id="chzzkAutoInterval" min="5" max="120" style="width:80px;" placeholder="30">
+            </div>
+            <div class="group">
+                <label>最早日期 (早于此日期的录像不自动下载)</label>
+                <input type="date" id="chzzkAutoEarliestDate">
+            </div>
+            <div class="group">
+                <label>监控的主播 (从 CHZZK 关注列表选择)</label>
+                <div id="chzzkAutoStreamerList" style="max-height:150px;overflow-y:auto;background:#1a1a2e;border-radius:5px;padding:8px;margin-top:6px;">
+                    <div style="color:#666;font-size:11px;">请先在设置中填写 CHZZK Cookie 和 Device ID</div>
+                </div>
+            </div>
+            <div class="group" style="border-top:1px solid #444;padding-top:12px;margin-top:8px;">
+                <label>状态</label>
+                <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+                    <span id="chzzkAutoStatus" style="font-size:11px;color:#888;">未启用</span>
+                    <button class="secondary" onclick="triggerChzzkAutoDownload()" style="padding:4px 8px;font-size:11px;">立即检测</button>
+                </div>
+            </div>
+            <div class="actions">
+                <button class="secondary" onclick="hideAutoDownload()">取消</button>
+                <button onclick="saveAutoDownload()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStreamer = null;
+        let currentVod = null;
+        let currentPage = 1;
+        let statusTimer = null;
+        let currentPlatform = localStorage.getItem('preferredPlatform') || 'soop';
+        let configState = {
+            soopCookie: false,
+            chzzkCookie: false,
+            chzzkDeviceId: ''
+        };
+
+        // 日志函数
+        function log(msg, type = 'info') {
+            const el = document.getElementById('logContent');
+            const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            el.innerHTML += `<div><span class="time">[${time}]</span> <span class="${type}">${msg}</span></div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // 初始化
+        loadConfig();
+
+        function applyPlatformTheme() {
+            const isChzzk = currentPlatform === 'chzzk';
+            document.body.classList.toggle('platform-chzzk', isChzzk);
+            document.body.classList.toggle('platform-soop', !isChzzk);
+            document.title = `${isChzzk ? 'CHZZK' : 'SOOP'} 录像下载器`;
+            document.getElementById('platformTitle').textContent = isChzzk ? 'CHZZK' : 'SOOP';
+            document.getElementById('platformSubtitle').textContent = isChzzk ? 'naver旗下平台' : '原AfreecaTV';
+            document.getElementById('platformLogo').src = isChzzk
+                ? 'https://ssl.pstatic.net/static/nng/glive/gif/logo_light.gif'
+                : 'https://res.sooplive.com/images/svg/soop_logo.svg';
+            document.getElementById('switchSoopBtn').classList.toggle('active', !isChzzk);
+            document.getElementById('switchChzzkBtn').classList.toggle('active', isChzzk);
+            document.getElementById('parseSectionTitle').textContent = `解析链接`;
+            document.getElementById('parseUrlInput').placeholder = 'SOOP/CHZZK/MPD/M3U8 链接';
+            document.getElementById('pageTitle').textContent = isChzzk ? '选择 CHZZK 频道查看录像' : '选择 SOOP 主播查看录像';
+        }
+
+        function switchPlatform(platform, options = {}) {
+            const { silent = false } = options;
+            currentPlatform = platform;
+            localStorage.setItem('preferredPlatform', platform);
+            currentStreamer = null;
+            currentVod = null;
+            currentPage = 1;
+            if (statusTimer) {
+                clearInterval(statusTimer);
+                statusTimer = null;
+            }
+            document.getElementById('vodGrid').innerHTML = '<div class="empty">请选择列表项</div>';
+            applyPlatformTheme();
+            showListPage();
+            renderFavoritesFromCache() || (document.getElementById('streamerList').innerHTML = '<div class="empty">加载中...</div>');
+            loadFavorites();
+            if (!silent) {
+                log(`已切换到 ${platform.toUpperCase()} 页面`, 'success');
+            }
+        }
+
+        function ensurePlatformReady(platform) {
+            if (platform === 'soop') {
+                return configState.soopCookie;
+            }
+            return configState.chzzkCookie && configState.chzzkDeviceId;
+        }
+
+        function renderPlatformEmpty(message) {
+            document.getElementById('streamerList').innerHTML = `<div class="empty">${message}</div>`;
+            document.getElementById('vodGrid').innerHTML = '<div class="empty">请选择列表项</div>';
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const data = await res.json();
+                configState = {
+                    soopCookie: !!data.cookie,
+                    chzzkCookie: !!data.chzzk_cookie,
+                    chzzkDeviceId: data.chzzk_device_id || ''
+                };
+                if (!ensurePlatformReady(currentPlatform)) {
+                    currentPlatform = ensurePlatformReady('chzzk') ? 'chzzk' : 'soop';
+                    localStorage.setItem('preferredPlatform', currentPlatform);
+                }
+                document.getElementById('cookieInput').value = data.cookie || '';
+                document.getElementById('chzzkCookieInput').value = data.chzzk_cookie || '';
+                document.getElementById('downloadDir').value = data.download_dir || '';
+                document.getElementById('m3u8dlPathInput').value = data.m3u8dl_path || '';
+                document.getElementById('aria2cPathInput').value = data.aria2c_path || '';
+                document.getElementById('ffmpegPathInput').value = data.ffmpeg_path || '';
+                document.getElementById('ytDlpPathInput').value = data.yt_dlp_path || '';
+                document.getElementById('chzzkDeviceIdInput').value = data.chzzk_device_id || '';
+                document.getElementById('allProxyInput').value = data.all_proxy || data.proxy || '';
+                document.getElementById('statusProxyInput').value = data.status_proxy || '';
+                document.getElementById('imageProxyInput').value = data.image_proxy || '';
+                document.getElementById('downloadProxyInput').value = data.download_proxy || '';
+                document.getElementById('splitEnabled').checked = data.split_enabled !== false;
+                document.getElementById('splitThresholdHours').value = data.split_threshold_hours ?? 3.5;
+                document.getElementById('splitSegmentHours').value = data.split_segment_hours ?? 2.5;
+                applyPlatformTheme();
+                log('配置已加载', 'success');
+                renderFavoritesFromCache() || (document.getElementById('streamerList').innerHTML = '<div class="empty">加载中...</div>');
+                loadFavorites();
+            } catch (e) {
+                log('加载配置失败: ' + e, 'error');
+            }
+        }
+
+        function showSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+            loadCacheStats();
+            loadDiskSpace();
+        }
+        function hideSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+
+        async function detectToolPaths() {
+            try {
+                const res = await fetch('/api/tool_paths/detect');
+                const data = await res.json();
+                document.getElementById('m3u8dlPathInput').value = data.m3u8dl_path || '';
+                document.getElementById('aria2cPathInput').value = data.aria2c_path || '';
+                document.getElementById('ffmpegPathInput').value = data.ffmpeg_path || '';
+                document.getElementById('ytDlpPathInput').value = data.yt_dlp_path || '';
+                const foundCount = [data.m3u8dl_path, data.aria2c_path, data.ffmpeg_path, data.yt_dlp_path].filter(Boolean).length;
+                document.getElementById('toolPathHint').textContent = `已识别 ${foundCount}/4 个工具`;
+                log(`已自动识别 ${foundCount}/4 个外部工具`, foundCount ? 'success' : 'info');
+            } catch (e) {
+                log('自动识别工具路径失败: ' + e, 'error');
+            }
+        }
+
+        let favoritesCache = [];
+        let chzzkFavoritesCache = [];
+        const vodPageCache = {};  // { "soop:<userId>:<page>": { data, meta }, ... }
+
+        // localStorage 缓存工具
+        const LS_PREFIX = 'soop_dl_';
+
+        function lsGet(key) {
+            try {
+                const raw = localStorage.getItem(LS_PREFIX + key);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch { return null; }
+        }
+
+        function lsSet(key, value) {
+            try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(value)); } catch { /* quota exceeded */ }
+        }
+
+        function favoritesEqual(a, b) {
+            if (!a || !b || a.length !== b.length) return false;
+            for (let i = 0; i < a.length; i++) {
+                if (currentPlatform === 'chzzk') {
+                    if (a[i].channelId !== b[i].channelId || a[i].streamer?.openLive !== b[i].streamer?.openLive) return false;
+                } else {
+                    if (a[i].user_id !== b[i].user_id || a[i].is_live !== b[i].is_live) return false;
+                }
+            }
+            return true;
+        }
+
+        function vodsEqual(a, b) {
+            return JSON.stringify(a) === JSON.stringify(b);
+        }
+        
+        async function showAutoDownload() {
+            document.getElementById('autoDownloadModal').classList.add('show');
+            await loadAutoDownloadConfig();
+            await loadChzzkAutoDownloadConfig();
+        }
+        function hideAutoDownload() { document.getElementById('autoDownloadModal').classList.remove('show'); }
+        
+        async function loadAutoDownloadConfig() {
+            try {
+                const res = await fetch('/api/auto_download/config');
+                const data = await res.json();
+                
+                document.getElementById('autoEnabled').checked = data.enabled || false;
+                document.getElementById('autoStartHour').value = data.start_hour ?? 22;
+                document.getElementById('autoEndHour').value = data.end_hour ?? 4;
+                document.getElementById('autoInterval').value = data.interval_minutes ?? 30;
+                document.getElementById('autoEarliestDate').value = data.earliest_date || '';
+                document.getElementById('autoStatus').textContent = data.running ? '运行中' : '未运行';
+                document.getElementById('autoStatus').style.color = data.running ? '#27ae60' : '#888';
+                
+                // 加载主播列表
+                await loadAutoStreamerList(data.streamers || []);
+            } catch (e) {
+                log('加载自动下载配置失败: ' + e, 'error');
+            }
+        }
+        
+        async function loadAutoStreamerList(selectedStreamers) {
+            const el = document.getElementById('autoStreamerList');
+            
+            // 如果没有缓存，先获取关注列表
+            if (favoritesCache.length === 0) {
+                try {
+                    const res = await fetch('/api/favorites');
+                    favoritesCache = await res.json();
+                } catch (e) {
+                    el.innerHTML = '<div style="color:#e74c3c;font-size:11px;">加载失败</div>';
+                    return;
+                }
+            }
+            
+            if (favoritesCache.length === 0) {
+                el.innerHTML = '<div style="color:#666;font-size:11px;">无关注主播</div>';
+                return;
+            }
+            
+            el.innerHTML = favoritesCache.map(s => `
+                <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:12px;">
+                    <input type="checkbox" class="auto-streamer-cb" value="${s.user_id}" 
+                        ${selectedStreamers.includes(s.user_id) ? 'checked' : ''} style="width:14px;height:14px;">
+                    ${s.user_nick} (@${s.user_id})
+                </label>
+            `).join('');
+        }
+
+        async function loadChzzkAutoDownloadConfig() {
+            try {
+                const res = await fetch('/api/chzzk/auto_download/config');
+                const data = await res.json();
+
+                document.getElementById('chzzkAutoEnabled').checked = data.enabled || false;
+                document.getElementById('chzzkAutoStartHour').value = data.start_hour ?? 22;
+                document.getElementById('chzzkAutoEndHour').value = data.end_hour ?? 4;
+                document.getElementById('chzzkAutoInterval').value = data.interval_minutes ?? 30;
+                document.getElementById('chzzkAutoEarliestDate').value = data.earliest_date || '';
+                document.getElementById('chzzkAutoStatus').textContent = data.running ? '运行中' : '未运行';
+                document.getElementById('chzzkAutoStatus').style.color = data.running ? '#27ae60' : '#888';
+
+                await loadChzzkAutoStreamerList(data.streamers || []);
+            } catch (e) {
+                log('加载 CHZZK 自动下载配置失败: ' + e, 'error');
+            }
+        }
+
+        async function loadChzzkAutoStreamerList(selectedStreamers) {
+            const el = document.getElementById('chzzkAutoStreamerList');
+
+            if (chzzkFavoritesCache.length === 0) {
+                try {
+                    const res = await fetch('/api/chzzk/followings');
+                    chzzkFavoritesCache = await res.json();
+                } catch (e) {
+                    el.innerHTML = '<div style="color:#e74c3c;font-size:11px;">加载失败，请检查 CHZZK Cookie / Device ID</div>';
+                    return;
+                }
+            }
+
+            if (chzzkFavoritesCache.length === 0) {
+                el.innerHTML = '<div style="color:#666;font-size:11px;">无关注主播或鉴权失败</div>';
+                return;
+            }
+
+            el.innerHTML = chzzkFavoritesCache.map(item => `
+                <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:12px;">
+                    <input type="checkbox" class="chzzk-auto-streamer-cb" value="${item.channelId}" 
+                        ${selectedStreamers.includes(item.channelId) ? 'checked' : ''} style="width:14px;height:14px;">
+                    ${item.channel?.channelName || item.channelId}${item.streamer?.openLive ? ' <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2f9e64;box-shadow:0 0 4px 1px #2f9e64;vertical-align:middle;margin-left:3px;"></span>' : ''}
+                </label>
+            `).join('');
+        }
+        
+        async function saveAutoDownload() {
+            const enabled = document.getElementById('autoEnabled').checked;
+            const start_hour = parseInt(document.getElementById('autoStartHour').value) || 22;
+            const end_hour = parseInt(document.getElementById('autoEndHour').value) || 4;
+            const interval_minutes = parseInt(document.getElementById('autoInterval').value) || 30;
+            const earliest_date = document.getElementById('autoEarliestDate').value || '';
+            
+            // 获取选中的主播
+            const streamers = [];
+            document.querySelectorAll('.auto-streamer-cb:checked').forEach(cb => {
+                streamers.push(cb.value);
+            });
+
+            const chzzk_enabled = document.getElementById('chzzkAutoEnabled').checked;
+            const chzzk_start_hour = parseInt(document.getElementById('chzzkAutoStartHour').value) || 22;
+            const chzzk_end_hour = parseInt(document.getElementById('chzzkAutoEndHour').value) || 4;
+            const chzzk_interval_minutes = parseInt(document.getElementById('chzzkAutoInterval').value) || 30;
+            const chzzk_earliest_date = document.getElementById('chzzkAutoEarliestDate').value || '';
+            const chzzk_streamers = [];
+            document.querySelectorAll('.chzzk-auto-streamer-cb:checked').forEach(cb => {
+                chzzk_streamers.push(cb.value);
+            });
+            
+            try {
+                await fetch('/api/auto_download/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled, start_hour, end_hour, interval_minutes, earliest_date, streamers })
+                });
+                await fetch('/api/chzzk/auto_download/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enabled: chzzk_enabled,
+                        start_hour: chzzk_start_hour,
+                        end_hour: chzzk_end_hour,
+                        interval_minutes: chzzk_interval_minutes,
+                        earliest_date: chzzk_earliest_date,
+                        streamers: chzzk_streamers
+                    })
+                });
+                hideAutoDownload();
+                log(`SOOP 自动下载${enabled ? '已启用' : '已禁用'}`, enabled ? 'success' : 'info');
+                log(`CHZZK 自动下载${chzzk_enabled ? '已启用' : '已禁用'}`, chzzk_enabled ? 'success' : 'info');
+            } catch (e) {
+                log('保存自动下载配置失败: ' + e, 'error');
+            }
+        }
+        
+        async function triggerAutoDownload() {
+            try {
+                await fetch('/api/auto_download/trigger', { method: 'POST' });
+                log('已触发自动下载检测', 'success');
+            } catch (e) {
+                log('触发失败: ' + e, 'error');
+            }
+        }
+
+        async function triggerChzzkAutoDownload() {
+            try {
+                await fetch('/api/chzzk/auto_download/trigger', { method: 'POST' });
+                log('已触发 CHZZK 自动下载检测', 'success');
+            } catch (e) {
+                log('触发 CHZZK 检测失败: ' + e, 'error');
+            }
+        }
+
+        function renderFavoritesFromCache() {
+            const lsKey = currentPlatform === 'chzzk' ? 'chzzk_fav' : 'soop_fav';
+            const cached = lsGet(lsKey);
+            if (cached?.data?.length) {
+                if (currentPlatform === 'chzzk') {
+                    chzzkFavoritesCache = cached.data;
+                    renderChzzkFollowings(cached.data);
+                } else {
+                    favoritesCache = cached.data;
+                    renderSoopFavorites(cached.data);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function renderSoopFavorites(data) {
+            const el = document.getElementById('streamerList');
+            el.innerHTML = data.map(s => `
+                <div class="streamer-item${s.is_live ? ' live' : ''}" onclick="selectStreamer('soop', '${s.user_id}', '${s.user_nick}')" data-platform="soop" data-id="${s.user_id}">
+                    <img class="avatar" src="https://profile.img.sooplive.co.kr/LOGO/${s.user_id.slice(0, 2)}/${s.user_id}/${s.user_id}.jpg" loading="lazy" onerror="this.style.visibility='hidden'">
+                    <div class="info">
+                        <div class="name">${s.user_nick}</div>
+                        <div class="id">@${s.user_id}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderChzzkFollowings(data) {
+            const el = document.getElementById('streamerList');
+            el.innerHTML = data.map(item => `
+                <div class="streamer-item${item.streamer?.openLive ? ' live' : ''}" onclick="selectStreamer('chzzk', '${item.channelId}', '${(item.channel?.channelName || item.channelId).replace(/'/g, '&#39;')}')" data-platform="chzzk" data-id="${item.channelId}">
+                    <img class="avatar" src="${item.channel?.channelImageUrl || ''}" loading="lazy" onerror="this.style.visibility='hidden'">
+                    <div class="info">
+                        <div class="name">${item.channel?.channelName || item.channelId}</div>
+                        <div class="id">@${item.channelId}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadFavorites() {
+            if (currentPlatform === 'chzzk') {
+                await loadChzzkFollowings();
+            } else {
+                await loadSoopFavorites();
+            }
+        }
+
+        async function loadSoopFavorites() {
+            if (!ensurePlatformReady('soop')) {
+                renderPlatformEmpty('请先在设置中填写 SOOP Cookie');
+                log('请先设置 SOOP Cookie');
+                return;
+            }
+
+            log('加载 SOOP 关注列表...');
+            try {
+                const res = await fetch('/api/favorites');
+                const data = await res.json();
+                const newData = data || [];
+                const prevData = favoritesCache.length ? favoritesCache : (lsGet('soop_fav')?.data || []);
+
+                if (!newData.length) {
+                    document.getElementById('streamerList').innerHTML = '<div class="empty">无关注或 SOOP Cookie 无效</div>';
+                    log('未获取到 SOOP 关注列表', 'error');
+                    favoritesCache = [];
+                    lsSet('soop_fav', { data: [] });
+                    return;
+                }
+
+                if (!favoritesEqual(newData, prevData)) {
+                    favoritesCache = newData;
+                    renderSoopFavorites(newData);
+                    lsSet('soop_fav', { data: newData });
+                    log(`已加载 ${newData.length} 个 SOOP 关注`, 'success');
+                } else {
+                    favoritesCache = newData;
+                    lsSet('soop_fav', { data: newData });
+                }
+            } catch (e) {
+                log('加载 SOOP 关注失败: ' + e, 'error');
+            }
+        }
+
+        async function loadChzzkFollowings() {
+            if (!ensurePlatformReady('chzzk')) {
+                renderPlatformEmpty('请先在设置中填写 CHZZK Cookie 和 Device ID');
+                log('请先设置 CHZZK Cookie 和 Device ID');
+                return;
+            }
+
+            log('加载 CHZZK 关注列表...');
+            try {
+                const res = await fetch('/api/chzzk/followings');
+                const data = await res.json();
+                const newData = data || [];
+                const prevData = chzzkFavoritesCache.length ? chzzkFavoritesCache : (lsGet('chzzk_fav')?.data || []);
+
+                if (!newData.length) {
+                    document.getElementById('streamerList').innerHTML = '<div class="empty">无关注或 CHZZK 鉴权失效</div>';
+                    log('未获取到 CHZZK 关注列表', 'error');
+                    chzzkFavoritesCache = [];
+                    lsSet('chzzk_fav', { data: [] });
+                    return;
+                }
+
+                if (!favoritesEqual(newData, prevData)) {
+                    chzzkFavoritesCache = newData;
+                    renderChzzkFollowings(newData);
+                    lsSet('chzzk_fav', { data: newData });
+                    log(`已加载 ${newData.length} 个 CHZZK 关注`, 'success');
+                } else {
+                    chzzkFavoritesCache = newData;
+                    lsSet('chzzk_fav', { data: newData });
+                }
+            } catch (e) {
+                log('加载 CHZZK 关注失败: ' + e, 'error');
+            }
+        }
+
+        function selectStreamer(platform, id, nick) {
+            document.querySelectorAll('.streamer-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.streamer-item[data-platform="${platform}"][data-id="${id}"]`)?.classList.add('active');
+            currentPlatform = platform;
+            applyPlatformTheme();
+            currentPage = 1;
+            currentStreamer = platform === 'chzzk'
+                ? { platform, channelId: id, nick }
+                : { platform, userId: id, nick };
+            document.getElementById('pageTitle').textContent = nick;
+            showListPage();
+            const pref = platform === 'chzzk' ? 'chzzk' : 'soop';
+            const vid = platform === 'chzzk' ? id : id;
+            if (!vodPageCache[`${pref}:${vid}:1`]) {
+                document.getElementById('vodGrid').innerHTML = '<div class="empty">加载中...</div>';
+            }
+            log(`加载 ${nick} 的录像...`);
+            loadVods();
+        }
+
+        async function loadVods() {
+            if (!currentStreamer) return;
+            if (currentStreamer.platform === 'chzzk') {
+                await loadChzzkVods();
+            } else {
+                await loadSoopVods();
+            }
+        }
+
+        function renderSoopVods(vods, meta) {
+            const el = document.getElementById('vodGrid');
+            if (!vods.length) {
+                el.innerHTML = '<div class="empty">暂无录像</div>';
+                return;
+            }
+            el.innerHTML = vods.map(v => `
+                <div class="vod-card" onclick="openDownloadPage(${v.title_no})">
+                    <div class="vod-thumb-wrap">
+                        <img class="vod-thumb" data-src="${v.ucc?.thumb ? '/api/image?url=' + encodeURIComponent('https:' + v.ucc.thumb) : ''}" onload="this.classList.add('loaded')">
+                        <span class="vod-duration">${formatDuration(v.ucc?.total_file_duration / 1000 || 0)}</span>
+                    </div>
+                    <div class="vod-info">
+                        <div class="vod-title" title="${v.title_name}">${v.title_name}</div>
+                        <div class="vod-meta">
+                            <span>${v.reg_date?.split(' ')[0]?.slice(5) || ''}</span>
+                            <span>${formatNumber(v.count?.read_cnt || 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lazyLoadImages();
+            const totalPages = meta?.last_page || 1;
+            document.getElementById('pageInfo').textContent = `${currentPage}/${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('pagination').style.display = totalPages > 1 ? 'flex' : 'none';
+        }
+
+        async function loadSoopVods() {
+            const cacheKey = `soop:${currentStreamer.userId}:${currentPage}`;
+            const cached = vodPageCache[cacheKey];
+            if (cached) {
+                renderSoopVods(cached.data, cached.meta);
+            }
+
+            try {
+                const res = await fetch(`/api/vods/${currentStreamer.userId}?page=${currentPage}&per_page=20`);
+                const data = await res.json();
+                const vods = data.data || [];
+                const meta = data.meta || {};
+
+                if (!vods.length) {
+                    if (!cached) {
+                        document.getElementById('vodGrid').innerHTML = '<div class="empty">暂无录像</div>';
+                        log('暂无 SOOP 录像');
+                    }
+                    return;
+                }
+
+                if (!cached || !vodsEqual(vods, cached.data) || JSON.stringify(meta) !== JSON.stringify(cached.meta)) {
+                    renderSoopVods(vods, meta);
+                    vodPageCache[cacheKey] = { data: vods, meta };
+                    log(`SOOP 第${currentPage}页，共${vods.length}条`, 'success');
+                }
+            } catch (e) {
+                if (!cached) log('加载 SOOP 录像失败: ' + e, 'error');
+            }
+        }
+
+        function renderChzzkVods(vods, totalPages) {
+            const el = document.getElementById('vodGrid');
+            if (!vods.length) {
+                el.innerHTML = '<div class="empty">暂无录像</div>';
+                return;
+            }
+            el.innerHTML = vods.map(v => `
+                <div class="vod-card" onclick="openChzzkDownloadPage(${v.videoNo})">
+                    <div class="vod-thumb-wrap">
+                        <img class="vod-thumb loaded" src="${v.thumbnailImageUrl || ''}">
+                        <span class="vod-duration">${formatDuration(v.duration || 0)}</span>
+                    </div>
+                    <div class="vod-info">
+                        <div class="vod-title" title="${v.videoTitle}">${v.videoTitle}</div>
+                        <div class="vod-meta">
+                            <span>${v.publishDate?.split(' ')[0]?.slice(5) || ''}</span>
+                            <span>${formatNumber(v.readCount || 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('pageInfo').textContent = `${currentPage}/${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('pagination').style.display = totalPages > 1 ? 'flex' : 'none';
+        }
+
+        async function loadChzzkVods() {
+            const cacheKey = `chzzk:${currentStreamer.channelId}:${currentPage}`;
+            const cached = vodPageCache[cacheKey];
+            if (cached) {
+                renderChzzkVods(cached.data, cached.totalPages);
+            }
+
+            try {
+                const res = await fetch(`/api/chzzk/channel/${currentStreamer.channelId}/videos?page=${currentPage - 1}&size=20`);
+                const data = await res.json();
+                const vods = data.data || [];
+                const totalPages = data.totalPages || 1;
+
+                if (!vods.length) {
+                    if (!cached) {
+                        document.getElementById('vodGrid').innerHTML = '<div class="empty">暂无录像</div>';
+                        log('暂无 CHZZK 录像');
+                    }
+                    return;
+                }
+
+                if (!cached || !vodsEqual(vods, cached.data) || totalPages !== cached.totalPages) {
+                    renderChzzkVods(vods, totalPages);
+                    vodPageCache[cacheKey] = { data: vods, totalPages };
+                    log(`CHZZK 第${currentPage}页，共${vods.length}条`, 'success');
+                }
+            } catch (e) {
+                if (!cached) log('加载 CHZZK 录像失败: ' + e, 'error');
+            }
+        }
+
+        async function loadCacheStats() {
+            try {
+                const res = await fetch('/api/cache/stats');
+                const stats = await res.json();
+                document.getElementById('cacheStats').textContent =
+                    `图片: ${stats.image_count}个 (${stats.image_size_mb}MB) | 数据: ${stats.data_count}个 (${stats.data_size_mb}MB)`;
+            } catch (e) {
+                document.getElementById('cacheStats').textContent = '获取失败';
+            }
+        }
+
+        async function clearCache() {
+            try {
+                const res = await fetch('/api/cache/clear', { method: 'POST' });
+                const data = await res.json();
+                log(`已清理 ${data.cleared} 个缓存文件`, 'success');
+                loadCacheStats();
+            } catch (e) {
+                log('清理缓存失败: ' + e, 'error');
+            }
+        }
+
+        function showCacheCleanup() {
+            document.getElementById('cacheCleanupModal').classList.add('show');
+        }
+
+        function hideCacheCleanup() {
+            document.getElementById('cacheCleanupModal').classList.remove('show');
+        }
+
+        async function executeCacheCleanup() {
+            const clearImages = document.getElementById('clearImages').checked;
+            const clearData = document.getElementById('clearData').checked;
+            const clearFragments = document.getElementById('clearFragments').checked;
+
+            if (!clearImages && !clearData && !clearFragments) {
+                alert('请至少选择一项要清理的内容');
+                return;
+            }
+
+            if (!confirm('确定要清理选中的缓存吗？此操作不可恢复。')) {
+                return;
+            }
+
+            log('正在清理缓存...', 'info');
+
+            try {
+                const res = await fetch('/api/cache/clear_selective', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        images: clearImages,
+                        data: clearData,
+                        fragments: clearFragments
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const result = data.result;
+                    const messages = [];
+                    if (result.images > 0) messages.push(`图片: ${result.images}个`);
+                    if (result.data > 0) messages.push(`数据: ${result.data}个`);
+                    if (result.fragments > 0) messages.push(`片段: ${result.fragments}个`);
+                    
+                    log(`清理完成 - ${messages.join(', ')}`, 'success');
+                    loadCacheStats();
+                    hideCacheCleanup();
+                } else {
+                    log('清理失败: ' + data.error, 'error');
+                }
+            } catch (e) {
+                log('清理缓存失败: ' + e, 'error');
+            }
+        }
+
+        async function saveSettings() {
+            const cookie = document.getElementById('cookieInput').value.trim();
+            const chzzk_cookie = document.getElementById('chzzkCookieInput').value.trim();
+            const chzzk_device_id = document.getElementById('chzzkDeviceIdInput').value.trim();
+            const dir = document.getElementById('downloadDir').value.trim();
+            const m3u8dl_path = document.getElementById('m3u8dlPathInput').value.trim();
+            const aria2c_path = document.getElementById('aria2cPathInput').value.trim();
+            const ffmpeg_path = document.getElementById('ffmpegPathInput').value.trim();
+            const yt_dlp_path = document.getElementById('ytDlpPathInput').value.trim();
+            const all_proxy = document.getElementById('allProxyInput').value.trim();
+            const status_proxy = document.getElementById('statusProxyInput').value.trim();
+            const image_proxy = document.getElementById('imageProxyInput').value.trim();
+            const download_proxy = document.getElementById('downloadProxyInput').value.trim();
+            const split_enabled = document.getElementById('splitEnabled').checked;
+            const split_threshold_hours = parseFloat(document.getElementById('splitThresholdHours').value) || 3.5;
+            const split_segment_hours = parseFloat(document.getElementById('splitSegmentHours').value) || 2.5;
+            log('保存设置...');
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cookie,
+                        chzzk_cookie,
+                        chzzk_device_id,
+                        download_dir: dir,
+                        m3u8dl_path,
+                        aria2c_path,
+                        ffmpeg_path,
+                        yt_dlp_path,
+                        proxy: all_proxy,
+                        all_proxy,
+                        status_proxy,
+                        image_proxy,
+                        download_proxy,
+                        split_enabled,
+                        split_threshold_hours,
+                        split_segment_hours
+                    })
+                });
+                hideSettings();
+                log('设置已保存', 'success');
+                configState = {
+                    soopCookie: !!cookie,
+                    chzzkCookie: !!chzzk_cookie,
+                    chzzkDeviceId: chzzk_device_id
+                };
+                if (!ensurePlatformReady(currentPlatform)) {
+                    currentPlatform = ensurePlatformReady('chzzk') ? 'chzzk' : 'soop';
+                    applyPlatformTheme();
+                }
+                favoritesCache = [];
+                chzzkFavoritesCache = [];
+                renderFavoritesFromCache() || (document.getElementById('streamerList').innerHTML = '<div class="empty">加载中...</div>');
+                loadFavorites();
+            } catch (e) {
+                log('保存失败: ' + e, 'error');
+            }
+        }
+
+        // 懒加载图片
+        function lazyLoadImages() {
+            const images = document.querySelectorAll('.vod-thumb[data-src]');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        observer.unobserve(img);
+                    }
+                });
+            }, { rootMargin: '50px' });
+            images.forEach(img => observer.observe(img));
+        }
+
+        function prevPage() {
+            if (currentPage > 1) { currentPage--; loadVodsWithLoading(); }
+        }
+        function nextPage() { currentPage++; loadVodsWithLoading(); }
+
+        function loadVodsWithLoading() {
+            if (!currentStreamer) return;
+            const pref = currentStreamer.platform === 'chzzk' ? 'chzzk' : 'soop';
+            const vid = currentStreamer.platform === 'chzzk' ? currentStreamer.channelId : currentStreamer.userId;
+            if (!vodPageCache[`${pref}:${vid}:${currentPage}`]) {
+                document.getElementById('vodGrid').innerHTML = '<div class="empty">加载中...</div>';
+            }
+            loadVods();
+        }
+        function showListPage() {
+            document.getElementById('listPage').style.display = 'block';
+            document.getElementById('downloadPage').classList.remove('show');
+            document.getElementById('processPage').classList.remove('show');
+            document.getElementById('historyPage').classList.remove('show');
+        }
+
+        function applySoopChapterTitles(vod) {
+            const chapterTitles = vod.chapter_titles || [];
+            let accumulatedTime = 0;
+            vod.files.forEach((f) => {
+                const fileStartSec = accumulatedTime;
+                accumulatedTime += (f.duration / 1000);
+
+                let matchedTitle = '';
+                if (chapterTitles.length > 0) {
+                    for (let j = chapterTitles.length - 1; j >= 0; j--) {
+                        if (chapterTitles[j].time_sec <= fileStartSec) {
+                            matchedTitle = chapterTitles[j].title || '';
+                            break;
+                        }
+                    }
+                    if (!matchedTitle) {
+                        matchedTitle = chapterTitles[0].title || '';
+                    }
+                }
+                f.chapter_title = matchedTitle || f.file_title || '';
+            });
+        }
+
+        async function renderDownloadPage(vod) {
+            currentVod = vod;
+            if (statusTimer) {
+                clearInterval(statusTimer);
+                statusTimer = null;
+            }
+            const thumbUrl = vod.thumb ? `/api/image?url=${encodeURIComponent(vod.thumb)}` : '';
+            document.getElementById('vodSummary').innerHTML = `
+                ${thumbUrl ? `<img src="${thumbUrl}" loading="lazy">` : ''}
+                <div class="info">
+                    <h3>${vod.title}</h3>
+                    <div class="meta">
+                        <span>${vod.user_nick}</span>
+                        <span>${vod.reg_date}</span>
+                        <span>${formatDuration((vod.duration || 0) / 1000)}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('chapterList').innerHTML = vod.files.map((f, i) => `
+                <div class="chapter-item" data-idx="${i}" data-chapter="${f.file_order}" data-task-id="${vod.task_id || vod.title_no}" data-duration="${f.duration}">
+                    <div class="chapter-item-header">
+                        <input type="checkbox" checked>
+                        <div class="ch-info">
+                            <div class="ch-title">${f.chapter_title || f.file_title || `章节 ${f.file_order}`}</div>
+                            <div class="ch-meta">${formatDuration((f.duration || 0) / 1000)} · ${(f.file_start || '').split(' ')[1] || ''}</div>
+                            <div class="ch-progress"></div>
+                        </div>
+                        <span class="status pending">待下载</span>
+                    </div>
+                    <div class="progress-bar"><div class="fill"></div></div>
+                </div>
+            `).join('');
+
+            document.getElementById('chapterCount').textContent = `共 ${vod.files.length} 个章节`;
+            document.getElementById('selectAll').checked = true;
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('statusText').textContent = '就绪';
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+            document.getElementById('cancelBtn').style.display = 'none';
+            document.getElementById('listPage').style.display = 'none';
+            document.getElementById('processPage').classList.remove('show');
+            document.getElementById('historyPage').classList.remove('show');
+            document.getElementById('downloadPage').classList.add('show');
+            log(`已加载 ${vod.files.length} 个章节`, 'success');
+
+            const taskId = vod.task_id || vod.title_no;
+            const statusRes = await fetch(`/api/download/status?task_id=${encodeURIComponent(taskId)}`);
+            const statusData = await statusRes.json();
+            if (statusData.running) {
+                document.getElementById('downloadBtn').style.display = 'none';
+                document.getElementById('cancelBtn').style.display = 'inline-block';
+                if (statusTimer) clearInterval(statusTimer);
+                statusTimer = setInterval(updateStatus, 2000);
+                updateStatus();
+            }
+        }
+
+        async function openDownloadPage(titleNo) {
+            log(`获取 SOOP 录像 #${titleNo} 详情...`);
+            try {
+                const res = await fetch(`/api/vod/${titleNo}`);
+                if (!res.ok) {
+                    log('获取详情失败', 'error');
+                    return;
+                }
+                const vod = await res.json();
+                applySoopChapterTitles(vod);
+                await renderDownloadPage(vod);
+            } catch (e) {
+                log('获取详情失败: ' + e, 'error');
+            }
+        }
+
+        async function openChzzkDownloadPage(videoNo) {
+            log(`获取 CHZZK 录像 #${videoNo} 详情...`);
+            try {
+                const res = await fetch(`/api/chzzk/video/${videoNo}`);
+                const data = await res.json();
+                const vod = data.vod_payload;
+                if (!vod || !vod.files?.length) {
+                    log('未解析到可下载链接', 'error');
+                    alert('未解析到可下载链接');
+                    return;
+                }
+                vod.files[0].chapter_title = vod.files[0].file_title || vod.title;
+                await renderDownloadPage(vod);
+            } catch (e) {
+                log('获取 CHZZK 详情失败: ' + e, 'error');
+            }
+        }
+
+        // 解析时间字符串为秒数
+        function parseTimeToSeconds(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':').map(Number);
+            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+            if (parts.length === 2) return parts[0] * 60 + parts[1];
+            return 0;
+        }
+
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('#chapterList input[type="checkbox"]').forEach(cb => cb.checked = checked);
+        }
+
+        async function startDownload() {
+            if (!currentVod) return;
+            const chapters = [];
+            document.querySelectorAll('#chapterList .chapter-item').forEach((el, i) => {
+                if (el.querySelector('input').checked) {
+                    const file = currentVod.files[i];
+                    // 确保传递 chapter_title 用于文件命名
+                    const chapter = {
+                        ...file,
+                        file_title: file.chapter_title || file.file_title || ''
+                    };
+                    console.log(`[DEBUG] 章节 ${file.file_order}: chapter_title='${file.chapter_title}', file_title='${chapter.file_title}'`);
+                    chapters.push(chapter);
+                }
+            });
+            if (!chapters.length) { alert('请选择章节'); return; }
+
+            log(`开始下载 ${chapters.length} 个章节...`, 'download');
+            document.getElementById('downloadBtn').style.display = 'none';
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+
+            try {
+                const res = await fetch('/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vod: currentVod, chapters })
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || '启动下载失败');
+                }
+                currentVod.task_id = data.task_id || currentVod.task_id || currentVod.title_no;
+                if (statusTimer) clearInterval(statusTimer);
+                statusTimer = setInterval(updateStatus, 2000);
+            } catch (e) {
+                log('启动下载失败: ' + e, 'error');
+                document.getElementById('downloadBtn').disabled = false;
+                document.getElementById('cancelBtn').disabled = true;
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const taskId = currentVod?.task_id || currentVod?.title_no;
+                if (!taskId) return;
+                
+                const res = await fetch(`/api/download/status?task_id=${encodeURIComponent(taskId)}`);
+                const data = await res.json();
+
+                // 更新状态
+                document.getElementById('statusText').textContent = data.message || '就绪';
+                
+                // 总进度条显示已完成章节数
+                const completedCount = data.tasks?.filter(t => t.status === 'completed').length || 0;
+                document.getElementById('progressFill').style.width =
+                    data.total > 0 ? (completedCount / data.total * 100) + '%' : '0%';
+
+                data.tasks?.forEach((t) => {
+                    const el = document.querySelector(`#chapterList .chapter-item[data-chapter="${t.chapter}"][data-task-id="${taskId}"]`);
+                    if (el) {
+                        const s = el.querySelector('.status');
+                        const p = el.querySelector('.ch-progress');
+                        const progressBar = el.querySelector('.progress-bar');
+                        const progressFill = el.querySelector('.progress-bar .fill');
+
+                        s.className = 'status ' + t.status;
+                        progressBar.className = 'progress-bar ' + t.status;
+
+                        if (t.status === 'downloading' || t.status === 'converting') {
+                            el.classList.add('downloading');
+                            s.textContent = t.status === 'converting' ? '转换中' : '下载中';
+                            if (t.progress && !t.progress.includes('启动')) {
+                                p.textContent = formatProgressText(t.progress);
+
+                                // 使用后端解析的进度百分比
+                                const progressPercent = t.progress_percent || 0;
+                                if (progressPercent > 0) {
+                                    progressFill.style.width = Math.min(99, progressPercent) + '%';
+                                } else {
+                                    progressFill.style.width = '5%';
+                                }
+                            } else {
+                                progressFill.style.width = '5%'; // 刚开始
+                            }
+                        } else if (t.status === 'completed') {
+                            el.classList.remove('downloading');
+                            s.textContent = '完成';
+                            p.textContent = '';
+                            progressFill.style.width = '100%';
+                        } else if (t.status === 'failed') {
+                            el.classList.remove('downloading');
+                            s.textContent = '失败';
+                            p.textContent = formatProgressText(t.progress || '');
+                            progressFill.style.width = '100%';
+                        } else if (t.status === 'retrying') {
+                            el.classList.add('downloading');
+                            s.textContent = '重试中';
+                            p.textContent = formatProgressText(t.progress || '');
+                            progressFill.style.width = '50%';
+                        } else {
+                            el.classList.remove('downloading');
+                            s.textContent = { pending: '待下载' }[t.status] || t.status;
+                            p.textContent = '';
+                            progressFill.style.width = '0%';
+                        }
+                    }
+                });
+
+                if (!data.running) {
+                    clearInterval(statusTimer);
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                    document.getElementById('cancelBtn').style.display = 'none';
+                    const ok = data.tasks?.filter(t => t.status === 'completed').length || 0;
+                    const fail = data.tasks?.filter(t => t.status === 'failed').length || 0;
+                    log(`下载完成: ${ok}成功${fail ? ', ' + fail + '失败' : ''}`, fail ? 'error' : 'success');
+                }
+            } catch (e) { }
+        }
+
+        async function cancelDownload() {
+            const taskId = currentVod?.task_id || currentVod?.title_no;
+            log('正在停止下载...', 'download');
+            await fetch('/api/download/cancel', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task_id: taskId, title_no: currentVod?.title_no })
+            });
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+            document.getElementById('cancelBtn').style.display = 'none';
+            log('已停止下载');
+        }
+
+        async function openFolder() {
+            await fetch('/api/open_folder', { method: 'POST' });
+        }
+
+        function formatDuration(sec) {
+            if (!sec || isNaN(sec)) return '0:00';
+            sec = Math.floor(sec);
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+            return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function formatNumber(n) {
+            if (n >= 10000) return (n / 10000).toFixed(1) + '万';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+            return n;
+        }
+
+        // 格式化进度文本，统一速度单位显示
+        function formatProgressText(text) {
+            if (!text) return text;
+            // 将 MBps 替换为 MB/s，将 Mbps 转换为 MB/s
+            text = text.replace(/(\d+\.?\d*)\s*MBps/gi, '$1 MB/s');
+            text = text.replace(/(\d+\.?\d*)\s*Mbps/gi, (match, speed) => {
+                // Mbps 转 MB/s (除以8)
+                return (parseFloat(speed) / 8).toFixed(2) + ' MB/s';
+            });
+            // 将 GiB 替换为 GB，MiB 替换为 MB
+            text = text.replace(/GiB/g, 'GB');
+            text = text.replace(/MiB/g, 'MB');
+            return text;
+        }
+
+        // 进程管理
+        function showProcessPage() {
+            document.getElementById('listPage').style.display = 'none';
+            document.getElementById('downloadPage').classList.remove('show');
+            document.getElementById('historyPage').classList.remove('show');
+            document.getElementById('processPage').classList.add('show');
+            refreshProcesses();
+            log('打开进程管理');
+        }
+
+        async function refreshProcesses() {
+            try {
+                const res = await fetch('/api/processes');
+                const processes = await res.json();
+                const el = document.getElementById('processList');
+
+                if (!processes.length) {
+                    el.innerHTML = '<div class="empty">暂无进程记录</div>';
+                    return;
+                }
+
+                el.innerHTML = processes.map(p => {
+                    const statusText = {
+                        running: '运行中',
+                        orphan: '孤儿进程',
+                        external: '外部进程',
+                        dead: '已结束',
+                        completed: '已完成',
+                        killed: '已终止',
+                        cancelled: '已取消'
+                    }[p.status] || p.status;
+
+                    const canKill = ['running', 'orphan', 'external'].includes(p.status);
+
+                    return `
+                    <div class="process-item" data-pid="${p.pid}">
+                        <div class="process-item-header" onclick="toggleProcess(${p.pid})">
+                            <span class="pid">PID ${p.pid}</span>
+                            <span class="cmd" title="${p.cmd}">${p.cmd}</span>
+                            <span class="proc-status ${p.status}">${statusText}</span>
+                            <span class="duration">${formatDuration(p.duration)}</span>
+                        </div>
+                        <div class="process-logs" id="logs-${p.pid}">加载中...</div>
+                        <div class="process-actions">
+                            <button onclick="loadProcessLogs(${p.pid})" class="secondary">刷新日志</button>
+                            ${canKill ? `<button onclick="killProcess(${p.pid})" style="background:#c0392b;">强制终止</button>` : ''}
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (e) {
+                log('获取进程列表失败: ' + e, 'error');
+            }
+        }
+
+        async function toggleProcess(pid) {
+            const el = document.querySelector(`.process-item[data-pid="${pid}"]`);
+            if (el.classList.contains('expanded')) {
+                el.classList.remove('expanded');
+            } else {
+                el.classList.add('expanded');
+                loadProcessLogs(pid);
+            }
+        }
+
+        async function loadProcessLogs(pid) {
+            try {
+                const res = await fetch(`/api/processes/${pid}/logs`);
+                const logs = await res.json();
+                const el = document.getElementById(`logs-${pid}`);
+                if (logs.length) {
+                    el.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+                    el.scrollTop = el.scrollHeight;
+                } else {
+                    el.innerHTML = '<div style="color:#666;">暂无日志</div>';
+                }
+            } catch (e) {
+                console.error('加载日志失败', e);
+            }
+        }
+
+        async function killProcess(pid) {
+            if (!confirm(`确定要强制终止进程 ${pid} 吗？`)) return;
+            try {
+                const res = await fetch(`/api/processes/${pid}/kill`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    log(`进程 ${pid} 已终止`, 'success');
+                    refreshProcesses();
+                } else {
+                    log(`终止进程 ${pid} 失败`, 'error');
+                }
+            } catch (e) {
+                log('终止进程失败: ' + e, 'error');
+            }
+        }
+
+        async function cleanupProcesses() {
+            try {
+                const res = await fetch('/api/processes/cleanup', { method: 'POST' });
+                const data = await res.json();
+                log(`已清理 ${data.cleaned} 个进程记录`);
+                refreshProcesses();
+            } catch (e) {
+                log('清理失败: ' + e, 'error');
+            }
+        }
+
+        // 下载历史
+        function showHistoryPage() {
+            document.getElementById('listPage').style.display = 'none';
+            document.getElementById('downloadPage').classList.remove('show');
+            document.getElementById('processPage').classList.remove('show');
+            document.getElementById('historyPage').classList.add('show');
+            loadHistory();
+            log('打开下载历史');
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/history');
+                const history = await res.json();
+                const el = document.getElementById('historyList');
+
+                if (!history.length) {
+                    el.innerHTML = '<div class="empty">暂无下载记录</div>';
+                    return;
+                }
+
+                el.innerHTML = history.map(h => {
+                    const statusText = {
+                        completed: '完成',
+                        partial: '部分完成',
+                        failed: '失败'
+                    }[h.status] || h.status;
+                    const statusClass = h.status === 'completed' ? 'completed' : h.status === 'partial' ? 'cancelled' : 'failed';
+                    const filesCount = h.files?.length || 0;
+
+                    return `
+                    <div class="process-item">
+                        <div class="process-item-header" style="cursor:default;">
+                            <span class="pid" style="min-width:auto;">#${h.title_no}</span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${h.user_nick} - ${h.title}</div>
+                                <div style="font-size:10px;color:#666;margin-top:2px;">${h.time} · ${filesCount}个文件</div>
+                            </div>
+                            <span class="proc-status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (e) {
+                log('获取下载历史失败: ' + e, 'error');
+            }
+        }
+
+        async function clearHistory() {
+            if (!confirm('确定要清空所有下载历史吗？')) return;
+            try {
+                await fetch('/api/history/clear', { method: 'POST' });
+                log('下载历史已清空', 'success');
+                loadHistory();
+            } catch (e) {
+                log('清空历史失败: ' + e, 'error');
+            }
+        }
+
+        // 磁盘空间
+        async function loadDiskSpace() {
+            try {
+                const res = await fetch('/api/disk_space');
+                const data = await res.json();
+                if (data.error) {
+                    document.getElementById('diskSpaceText').textContent = '获取失败';
+                    return;
+                }
+                const bar = document.getElementById('diskSpaceBar');
+                const text = document.getElementById('diskSpaceText');
+                bar.style.width = data.percent_used + '%';
+                // 根据使用率改变颜色
+                if (data.percent_used > 90) {
+                    bar.style.background = '#e74c3c';
+                } else if (data.percent_used > 70) {
+                    bar.style.background = 'linear-gradient(90deg,#f39c12,#e67e22)';
+                } else {
+                    bar.style.background = 'linear-gradient(90deg,#27ae60,#2ecc71)';
+                }
+                text.textContent = `已用 ${data.used_gb}GB / ${data.total_gb}GB (剩余 ${data.free_gb}GB)`;
+            } catch (e) {
+                document.getElementById('diskSpaceText').textContent = '获取失败';
+            }
+        }
+
+        // 解析链接
+        async function parseUrl() {
+            const input = document.getElementById('parseUrlInput');
+            const url = input.value.trim();
+            if (!url) {
+                alert('请输入链接');
+                return;
+            }
+
+            // 检测是否是手动 MPD/M3U8 链接，显示/隐藏标题输入
+            const isManualUrl = /\.(mpd|m3u8?)(\?|$)/i.test(url);
+            const titleRow = document.getElementById('manualTitleRow');
+            if (isManualUrl) {
+                titleRow.style.display = 'block';
+            }
+
+            log(`解析链接: ${url.substring(0, 50)}...`);
+
+            const body = { url };
+            if (isManualUrl) {
+                body.manual_title = document.getElementById('manualTitleInput').value.trim();
+            }
+
+            try {
+                const res = await fetch('/api/parse_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                
+                if (data.error) {
+                    log(data.error, 'error');
+                    alert(data.error);
+                    return;
+                }
+                
+                if (data.type === 'vod') {
+                    log(`解析成功: ${data.data.user_nick} - ${data.data.title}`, 'success');
+                    await openParsedVodPage(data.data);
+                } else if (data.type === 'streamer') {
+                    log(`解析成功: ${data.data.user_nick} (@${data.data.user_id})`, 'success');
+                    showParsedStreamerVods(data.data);
+                }
+                
+                input.value = '';
+            } catch (e) {
+                log('解析失败: ' + e, 'error');
+                alert('解析失败: ' + e);
+            }
+        }
+
+        // 显示解析的录像下载页面
+        async function openParsedVodPage(vod) {
+            currentPlatform = vod.platform || currentPlatform;
+            applyPlatformTheme();
+            if (vod.platform === 'soop') {
+                applySoopChapterTitles(vod);
+            } else if (vod.files?.[0]) {
+                vod.files[0].chapter_title = vod.files[0].file_title || vod.title;
+            }
+            await renderDownloadPage(vod);
+        }
+
+        function showParsedStreamerVods(streamerData) {
+            currentPlatform = streamerData.platform || currentPlatform;
+            applyPlatformTheme();
+            currentStreamer = streamerData.platform === 'chzzk'
+                ? { platform: 'chzzk', channelId: streamerData.channel_id || streamerData.user_id, nick: streamerData.user_nick }
+                : { platform: 'soop', userId: streamerData.user_id, nick: streamerData.user_nick };
+            currentPage = 1;
+            document.querySelectorAll('.streamer-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('pageTitle').textContent = `${streamerData.user_nick} (解析)`;
+            const vods = streamerData.vods || [];
+            const el = document.getElementById('vodGrid');
+            const meta = streamerData.meta || {};
+
+            if (!vods.length) {
+                el.innerHTML = '<div class="empty">暂无录像</div>';
+                return;
+            }
+
+            el.innerHTML = vods.map(v => `
+                <div class="vod-card" onclick="${streamerData.platform === 'chzzk' ? `openChzzkDownloadPage(${v.videoNo})` : `openDownloadPage(${v.title_no})`}">
+                    <div class="vod-thumb-wrap">
+                        <img class="vod-thumb ${streamerData.platform === 'chzzk' ? 'loaded' : ''}" ${streamerData.platform === 'chzzk'
+                            ? `src="${v.thumbnailImageUrl || ''}"`
+                            : `data-src="${v.ucc?.thumb ? '/api/image?url=' + encodeURIComponent('https:' + v.ucc.thumb) : ''}" onload="this.classList.add('loaded')"`}>
+                        <span class="vod-duration">${formatDuration(streamerData.platform === 'chzzk' ? (v.duration || 0) : (v.ucc?.total_file_duration / 1000 || 0))}</span>
+                    </div>
+                    <div class="vod-info">
+                        <div class="vod-title" title="${streamerData.platform === 'chzzk' ? v.videoTitle : v.title_name}">${streamerData.platform === 'chzzk' ? v.videoTitle : v.title_name}</div>
+                        <div class="vod-meta">
+                            <span>${(streamerData.platform === 'chzzk' ? v.publishDate : v.reg_date)?.split(' ')[0]?.slice(5) || ''}</span>
+                            <span>${formatNumber(streamerData.platform === 'chzzk' ? (v.readCount || 0) : (v.count?.read_cnt || 0))}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            if (streamerData.platform !== 'chzzk') {
+                lazyLoadImages();
+            }
+
+            const totalPages = meta.last_page || meta.totalPages || 1;
+            document.getElementById('pageInfo').textContent = `${currentPage}/${totalPages}`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('pagination').style.display = totalPages > 1 ? 'flex' : 'none';
+
+            document.getElementById('downloadPage').classList.remove('show');
+            document.getElementById('processPage').classList.remove('show');
+            document.getElementById('historyPage').classList.remove('show');
+            document.getElementById('listPage').style.display = 'block';
+        }
+
+        // 支持回车键解析
+        document.getElementById('parseUrlInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') parseUrl();
+        });
+        document.getElementById('manualTitleInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') parseUrl();
+        });
+        // 输入时自动检测 MPD/M3U8 链接，显示标题输入框
+        document.getElementById('parseUrlInput')?.addEventListener('input', function(e) {
+            const url = e.target.value.trim();
+            const isManualUrl = /\.(mpd|m3u8?)(\?|$)/i.test(url);
+            document.getElementById('manualTitleRow').style.display = isManualUrl ? 'block' : 'none';
+        });
+    </script>
+</body>
+
+</html>

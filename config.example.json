@@ -1,0 +1,35 @@
+{
+  "cookie": "",
+  "chzzk_cookie": "",
+  "chzzk_device_id": "",
+  "download_dir": "~/Downloads/SOOP",
+  "m3u8dl_path": "",
+  "aria2c_path": "",
+  "ffmpeg_path": "",
+  "yt_dlp_path": "",
+  "proxy": "",
+  "all_proxy": "",
+  "status_proxy": "",
+  "image_proxy": "",
+  "download_proxy": "",
+  "max_file_size_gb": 16,
+  "split_enabled": true,
+  "split_threshold_hours": 3.5,
+  "split_segment_hours": 2.5,
+  "auto_download": {
+    "enabled": false,
+    "start_hour": 22,
+    "end_hour": 4,
+    "interval_minutes": 30,
+    "earliest_date": "",
+    "streamers": []
+  },
+  "chzzk_auto_download": {
+    "enabled": false,
+    "start_hour": 22,
+    "end_hour": 4,
+    "interval_minutes": 30,
+    "earliest_date": "",
+    "streamers": []
+  }
+}
